@@ -46,12 +46,15 @@ To use an alias, simply start typing its prefix and press TAB to see available o
 
 There are three ways to install the Bash Aliases:
 
-1. `curl -fsSL https://raw.githubusercontent.com/wtfix/bash_aliases/main/install.sh | bash`
+1. One-liner (installs the `minimal` preset by default):
+```bash
+curl -fsSL https://raw.githubusercontent.com/wtfix/bash_aliases/main/install.sh | bash
+```
 
 2. Clone the repository using Git: 
 ```bash
 git clone https://github.com/wtfix/bash_aliases.git $HOME/bash_aliases
-bash $HOME/bash_aliases/_core/install.sh
+bash $HOME/bash_aliases/install.sh
 ```
 
 3. Download the latest release from the GitHub repository and unzip it to your home directory. Then, add the following to your `.bashrc` or `.zshrc`:
