@@ -97,4 +97,3 @@ monitor-mode-support-check() {
         fi
     done <<< "$interfaces"
 }
-# test
