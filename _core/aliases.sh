@@ -155,6 +155,14 @@ __bash_aliases_find_function() {
 }
 
 # Add or update an alias line in a file. Returns 0 when added, 1 when updated.
+# Ensure a blank-line separation above an appended block in a non-empty file.
+__bash_aliases_append_separator() {
+    local file="$1"
+    [[ -s "$file" ]] || return 0
+    [[ -z "$(tail -n 1 "$file")" ]] && return 0
+    printf '\n' >> "$file"
+}
+
 __bash_aliases_write_alias() {
     local name="$1" quoted="$2" file="$3"
     local tmp="${file}.tmp" found=0 line
@@ -172,6 +180,7 @@ __bash_aliases_write_alias() {
         mv "$tmp" "$file"
     fi
     if [[ $found -eq 0 ]]; then
+        __bash_aliases_append_separator "$file"
         printf 'alias %s=%s\n' "$name" "$quoted" >> "$file"
         return 0
     fi
@@ -513,6 +522,7 @@ aliases_move() {
     [[ -s "$src_file" ]] || rm -f "$src_file"
 
     # Append the alias to the destination file
+    __bash_aliases_append_separator "$dest_file"
     printf '%s\n' "$line" >> "$dest_file"
 
     echo "Moved alias '$name' to ${dest_file#$BASH_ALIASES_ROOT/}"
