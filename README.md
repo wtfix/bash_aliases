@@ -118,6 +118,10 @@ $ aliases add net wip "git status"        # or: al a net wip "git status"
 $ aliases edit pp                 # or: al e pp
 $ aliases edit net                # opens the whole net.sh
 
+# `edit` accepts either an alias name (opens the editor on its definition
+# line) or a category/file name like `net` (opens the whole .sh file).
+# Prefix an editor to override the configured one for this call: al e -zed pp
+
 # Remove an alias / move it to another category file
 $ aliases remove wip              # or: al r wip
 $ aliases move wip docker         # or: al m wip docker
