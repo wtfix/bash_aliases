@@ -17,12 +17,45 @@ aliases() {
         t | tree)                   aliases_tree "$@" ;;
         c | config)                 aliases_config "$@" ;;
         w | which)                  aliases_which "$@" ;;
+        sv | save-to-git | sync)    aliases_save_git "$@" ;;
         h | help | wtf)             aliases_help ;;
         *)                          echo "Unknown command: $cmd" >&2; aliases_help ;;
     esac
 }
 
 alias al="aliases"
+
+# Commit all changes in $BASH_ALIASES_ROOT and push them to origin.
+# Optional argument is used as the commit message.
+aliases_save_git() {
+    local msg="${*:-Update aliases}"
+
+    command -v git >/dev/null 2>&1 || { echo "Error: git is not installed." >&2; return 1; }
+    [[ -d "$BASH_ALIASES_ROOT/.git" ]] || { echo "Error: $BASH_ALIASES_ROOT is not a git repository." >&2; return 1; }
+
+    cd "$BASH_ALIASES_ROOT" || return 1
+
+    if [[ -z "$(git status --porcelain)" ]]; then
+        echo "Working tree clean - nothing to save."
+        return 0
+    fi
+
+    echo "Changes:"
+    git status --short
+    git add -A
+    git commit -m "$msg" || { echo "Commit failed." >&2; return 1; }
+
+    if git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+        git pull --rebase || { echo "Rebase against origin failed - resolve conflicts and push manually." >&2; return 1; }
+    fi
+
+    if git push; then
+        echo "Saved & pushed: $msg"
+    else
+        echo "Push failed - set up push credentials for this host (SSH key or token)." >&2
+        return 1
+    fi
+}
 
 # ------------------------------------------------------------------
 # Helpers
@@ -538,6 +571,7 @@ aliases_help() {
     echo -e "  ${GREEN}t | tree${NC}                Show the directory/file structure"
     echo -e "  ${GREEN}w | which NAME${NC}           Show where NAME is defined + its code"
     echo -e "  ${GREEN}c | config ...${NC}           Config: open | set KEY VAL | get KEY | list | unset KEY"
+    echo -e "  ${GREEN}sv | save-to-git [MSG]${NC}   Commit & push all alias changes (MSG = commit message)"
     echo -e "  ${GREEN}h | help${NC}                 Show this help message\n"
 
     echo -e "${YELLOW}${BOLD}Adding Aliases:${NC}"
@@ -607,7 +641,7 @@ _aliases_complete() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     COMPREPLY=()
 
-    local cmds="list search add edit remove move tree config which help create l s a n + e c r d m t w h"
+    local cmds="list search add edit remove move tree config which save-to-git sync help create l s a n + e c r d m t w h sv g"
 
     if (( ${COMP_CWORD:-0} == 1 )); then
         COMPREPLY=( $(compgen -W "$cmds" -- "$cur") )
