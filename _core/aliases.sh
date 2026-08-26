@@ -784,6 +784,8 @@ aliases_help() {
     echo -e "  ${BLUE}aliases list net${NC}          ${GRAY}# aliases starting with 'net'${NC}"
     echo -e "  ${BLUE}aliases search sqlite${NC}"
     echo -e "  ${BLUE}aliases edit net${NC} ${GRAY}# open the whole net.sh${NC}"
+    echo -e "  ${BLUE}aliases edit pp${NC} ${GRAY}# edit accepts an alias (opens at its line) or a file name${NC}"
+    echo -e "  ${BLUE}aliases edit -zed pp${NC} ${GRAY}# same, but in zed for this one call${NC}"
     echo -e "  ${BLUE}aliases remove old-alias${NC}"
     echo -e "  ${BLUE}aliases move wip net${NC} ${GRAY}# move 'wip' into net.sh${NC}\n"
 
