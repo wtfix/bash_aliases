@@ -92,11 +92,14 @@ al install to user@host              # minimal preset; host fetches via curl
 al install to user@host full         # full collection
 al install to user@host --offline    # host has no internet: repo is copied
                                      # over ssh WITHOUT .git (read-only mirror)
+al install to user@host minimal --offline --with-git
+                                     # also transfer .git (asks confirmation)
 ```
 
 The offline copy contains no credentials and cannot push anywhere. To also
 transfer the repository history, add `--with-git` - it asks for confirmation,
 since pushing from such a host would require copying your SSH write key there.
+Do not use `--with-git` on untrusted hosts.
 
 ## Usage Examples
 
