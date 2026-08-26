@@ -526,6 +526,8 @@ aliases_install() {
             ;;
         -*)
             __ba_preset_toggle "${arg#-}" off ;;
+        to)
+            aliases_install_to "$@" ;;
         full)
             printf 'full\n' > "$BASH_ALIASES_ROOT/.preset"
             echo "Preset set to: full"
@@ -547,9 +549,60 @@ aliases_install() {
     esac
 }
 
+aliases_install_to() {
+    local host="" preset="minimal" offline=0 with_git=0 a
+    for a in "$@"; do
+        case "$a" in
+            --offline)  offline=1 ;;
+            --with-git) with_git=1 ;;
+            -*)         echo "Unknown option: $a" >&2; return 1 ;;
+            *)  if [[ -z "$host" ]]; then host="$a"; else preset="$a"; fi ;;
+        esac
+    done
+    [[ -n "$host" ]] || { echo "Usage: al install to <user>@host [preset] [--offline] [--with-git]" >&2; return 1; }
+    command -v ssh >/dev/null 2>&1 || { echo "Error: ssh is not installed." >&2; return 1; }
+
+    if (( ! offline )); then
+        echo "== Installing preset '$preset' on $host (remote fetches via curl) =="
+        ssh "$host" "curl -fsSL https://raw.githubusercontent.com/wtfix/bash_aliases/main/install.sh | bash -s -- '$preset'"
+        return
+    fi
+
+    if (( with_git )); then
+        echo "WARNING: this transfers the repository's .git to $host."
+        echo "Pushing from there requires copying your SSH write key as well -"
+        echo "do NOT do that on untrusted hosts. (.git itself contains no secrets.)"
+        local ans=""
+        read -r -p "Include .git anyway? [y/N] " ans
+        [[ "$ans" == [yY]* ]] || { echo "Aborted - installing without .git."; with_git=0; }
+    fi
+
+    local -a ex=()
+    (( with_git )) || ex=(--exclude=./.git)
+
+    echo "== Copying repo to $host:~/bash_aliases (git: $(( with_git ? yes : no ))) =="
+    ssh "$host" 'mkdir -p ~/bash_aliases'
+    tar -C "$BASH_ALIASES_ROOT" "${ex[@]}" -cf - . | ssh "$host" 'tar -xf - -C ~/bash_aliases'
+
+    ssh "$host" bash -s -- "$preset" <<'REMOTE'
+set -e
+printf '%s\n' "$1" > "$HOME/bash_aliases/.preset"
+RC="$HOME/.bashrc"
+grep -q BASH_ALIASES_ROOT "$RC" 2>/dev/null || {
+    {
+        echo ''
+        echo '# Bash Aliases'
+        echo 'export BASH_ALIASES_ROOT="$HOME/bash_aliases"'
+        echo '[ -e "$BASH_ALIASES_ROOT/_core/init.sh" ] && source "$BASH_ALIASES_ROOT/_core/init.sh"'
+    } >> "$RC"
+    echo "Added init snippet to $RC"
+}
+echo "Done. Preset: $1"
+REMOTE
+}
+
 __ba_preset_toggle() {
     local cat="$1" want="$2"
-
     [[ -e "$BASH_ALIASES_ROOT/$cat.sh" || -d "$BASH_ALIASES_ROOT/$cat" ]] \
         || { echo "Unknown category or preset: $cat (see: al tree)" >&2; return 1; }
 
@@ -594,7 +647,11 @@ aliases_install_help() {
     echo -e "  ${GREEN}<preset>${NC}            Activate a predefined preset  ${GRAY}(${names:-see _core/presets.sh})${NC}"
     echo -e "  ${GREEN}<category>${NC}          Additionally enable a file    ${GRAY}e.g.: al install python${NC}"
     echo -e "  ${GREEN}-<category>${NC}         Disable a file                ${GRAY}e.g.: al install -wifi${NC}"
-    echo -e "  ${GREEN}upgrade${NC}             Fetch latest framework + files (git pull), then rehash\n"
+    echo -e "  ${GREEN}upgrade${NC}             Fetch latest framework + files (git pull), then rehash"
+    echo -e "  ${GREEN}to <user>@host [PRESET]${NC}   Install on a remote host (host fetches via curl)"
+    echo -e "  ${GREEN}to <user>@host PRESET --offline${NC}  Copy repo over ssh (no internet needed;"
+    echo -e "                                ${GRAY}no .git -> no way to push from that host)${NC}"
+    echo -e "                                ${GRAY}add --with-git to include .git (asks confirmation)${NC}\n"
 
     echo -e "${YELLOW}${BOLD}Notes:${NC}"
     echo -e "  Categories = the .sh files listed by ${BLUE}al tree${NC}"

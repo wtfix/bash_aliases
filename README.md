@@ -82,6 +82,56 @@ al install upgrade    # fetch latest framework + files
 
 No `.preset` file means "source everything" (the pre-presets behavior).
 
+### Install on a remote host
+
+```bash
+al install to user@host              # minimal preset; host fetches via curl
+al install to user@host full         # full collection
+al install to user@host --offline    # host has no internet: repo is copied
+                                     # over ssh WITHOUT .git (read-only mirror)
+```
+
+The offline copy contains no credentials and cannot push anywhere. To also
+transfer the repository history, add `--with-git` - it asks for confirmation,
+since pushing from such a host would require copying your SSH write key there.
+
+## Usage Examples
+
+Every command has a long form (`aliases ...`) and a shorthand (`al ...`) -
+both are shown below, they do exactly the same.
+
+```bash
+# List aliases and functions
+$ aliases list                    # or: al l
+$ aliases list net                # only names starting with 'net'   (al l net)
+
+# Search by keyword
+$ aliases search sqlite           # or: al s sqlite
+
+# Show where a command is defined + its code
+$ aliases which pp                # or: al w pp
+
+# Add an alias
+$ aliases add net wip "git status"        # or: al a net wip "git status"
+
+# Open your configured editor right at the line of an alias or file
+$ aliases edit pp                 # or: al e pp
+$ aliases edit net                # opens the whole net.sh
+
+# Remove an alias / move it to another category file
+$ aliases remove wip              # or: al r wip
+$ aliases move wip docker         # or: al m wip docker
+
+# Commit & push your whole collection to git
+$ aliases save-to-git "Add wip"   # or: al sv "Add wip"
+
+# Presets and remote installation
+$ aliases install standard            # or: al i standard
+$ aliases install python              # enable one more category
+$ aliases install upgrade             # fetch latest version
+$ aliases install to me@vps full      # or: al i to me@vps full
+```
+
 ## Getting Started
 
 Restart your shell or run `source ~/.bashrc` (or `~/.zshrc`)
