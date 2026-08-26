@@ -617,7 +617,7 @@ aliases_install_status() {
     echo
     for f in "$BASH_ALIASES_ROOT"/*.sh; do
         rel="${f##*/}"
-        [[ "$rel" == _* || "$rel" == "install.sh" ]] && continue
+        [[ "$rel" == "install.sh" || "$rel" == "_config.sh" ]] && continue
         if __ba_preset_allows "${rel%.sh}"; then mark="[x]"; else mark="[ ]"; fi
         echo "  $mark $rel"
     done
@@ -633,7 +633,8 @@ aliases_tree() {
     echo "$root"
     for f in "$root"/*.sh; do
         rel="${f##*/}"
-        if [[ "$rel" == _* || "$rel" == "install.sh" ]]; then
+        [[ "$rel" == "install.sh" ]] && continue
+        if [[ "$rel" == "_config.sh" ]]; then
             echo "    $rel"
             continue
         fi
@@ -782,7 +783,7 @@ _aliases_complete_install() {
     local cur="$1" words="" f
     for f in "$BASH_ALIASES_ROOT"/*.sh; do
         f="${f##*/}"
-        [[ "$f" == _*.sh ]] && continue
+        [[ "$f" == "install.sh" || "$f" == "_config.sh" ]] && continue
         words+=" ${f%.sh} -${f%.sh}"
     done
     COMPREPLY=( $(compgen -W "help full minimal standard upgrade $words" -- "$cur") )
