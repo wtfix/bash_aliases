@@ -376,9 +376,18 @@ aliases_edit() {
     local input="$1"
     local line_number="$2"
     local file_path
+    local editor_override=""
+
+    if [[ "$input" =~ ^-[a-zA-Z][a-zA-Z0-9]*$ ]]; then
+        editor_override="${input#-}"
+        shift
+        input="$1"
+        line_number="$2"
+    fi
 
     if [[ -z "$input" ]]; then
-        echo "Usage: aliases edit [NAME | CATEGORY/FILE] [LINE]"
+        echo "Usage: aliases edit [-EDITOR] [NAME | CATEGORY/FILE] [LINE]"
+        echo "  e.g.: aliases edit -zed pp   (open 'pp' in zed regardless of the configured editor)"
         return 1
     fi
 
@@ -414,9 +423,9 @@ aliases_edit() {
 
     # Open the file with the editor
     if [[ -n "$line_number" && "$line_number" =~ ^[0-9]+$ ]]; then
-        __bash_aliases_editor_open "$full_path" "$line_number"
+        __bash_aliases_editor_open "$full_path" "$line_number" "${editor_override:-}"
     else
-        __bash_aliases_editor_open "$full_path"
+        __bash_aliases_editor_open "$full_path" 0 "${editor_override:-}"
     fi
 }
 
@@ -744,7 +753,7 @@ aliases_help() {
     echo -e "  ${GREEN}l | list [PREFIX]${NC}        List aliases AND functions (PREFIX shows matching code)"
     echo -e "  ${GREEN}s | search KEYWORD${NC}       Search aliases/functions"
     echo -e "  ${GREEN}a | add ...${NC}              Add an alias (see below)"
-    echo -e "  ${GREEN}e | edit TARGET${NC}          Edit a file or alias: NAME (alias/category file) or CATEGORY/FILE (nested)"
+    echo -e "  ${GREEN}e | edit [-EDITOR] TARGET${NC}  Edit a file or alias: NAME (alias/category file) or CATEGORY/FILE (nested)"
     echo -e "  ${GREEN}r | remove NAME${NC}          Remove an alias"
     echo -e "  ${GREEN}m | move ...${NC}             Move an alias between files"
     echo -e "  ${GREEN}t | tree${NC}                Show the directory/file structure"
