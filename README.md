@@ -46,7 +46,7 @@ To use an alias, simply start typing its prefix and press TAB to see available o
 
 There are three ways to install the Bash Aliases:
 
-1. `curl -fsSL https://raw.githubusercontent.com/wtfix/bash_aliases/main/_core/install.sh | bash`
+1. `curl -fsSL https://raw.githubusercontent.com/wtfix/bash_aliases/main/install.sh | bash`
 
 2. Clone the repository using Git: 
 ```bash
@@ -64,6 +64,23 @@ if [ -e "$BASH_ALIASES_ROOT/_core/init.sh" ]; then
     source "$BASH_ALIASES_ROOT/_core/init.sh"
 fi
 ```
+
+## Presets
+
+Fresh installs source a small `minimal` set (`bash.sh`, `net.sh`, `files.sh`).
+The selection is per-machine and lives in the repo's `.preset` file
+(e.g. `~/bash_aliases/.preset`, git-ignored):
+
+```bash
+al install            # status: current preset + enabled/disabled files
+al install help       # all options
+al install standard   # switch preset: minimal | standard | full
+al install python     # additionally enable one category
+al install -wifi      # disable one category
+al install upgrade    # fetch latest framework + files
+```
+
+No `.preset` file means "source everything" (the pre-presets behavior).
 
 ## Getting Started
 

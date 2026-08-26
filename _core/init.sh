@@ -48,22 +48,25 @@ source_file "$BASH_ALIASES_CONFIG_FILE"
 source_file "$BASH_ALIASES_SRC/editor.sh"
 source_file "$BASH_ALIASES_SRC/config.sh"
 source_file "$BASH_ALIASES_SRC/functions.sh"
+source_file "$BASH_ALIASES_SRC/presets.sh"
+__ba_preset_load
 
 
 # Initialize counter
 total_files=0
 
-# Source all alias scripts in ~/bash_aliases and its subdirectories
-for file in "$HOME/bash_aliases"/**/*.sh; do
-    # Check if any files matched the pattern before sourcing
-    if [[ -e "$file" ]]; then
-        source_file "$file"
-        ((total_files++))
- 
-    else
-        echo "No matching files found." >&2
+# Source alias scripts; root-level categories are filtered by .preset,
+# sub-directories and _core are always active.
+for file in "$BASH_ALIASES_ROOT"/**/*.sh; do
+    [[ -e "$file" ]] || continue
+    [[ "${file##*/}" == "install.sh" ]] && continue
+    if [[ "${file#$BASH_ALIASES_ROOT/}" != */* ]] \
+       && ! __ba_preset_allows "$(basename "${file%.sh}")"; then
+        continue
     fi
-        done
+    source_file "$file"
+    ((total_files++))
+done
 
 
 rehash_aliases() {

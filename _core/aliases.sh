@@ -16,6 +16,7 @@ aliases() {
         m | move)                   aliases_move "$@" ;;
         t | tree)                   aliases_tree "$@" ;;
         c | config)                 aliases_config "$@" ;;
+        i | install)                aliases_install "$@" ;;
         w | which)                  aliases_which "$@" ;;
         sv | save-to-git | sync)    aliases_save_git "$@" ;;
         h | help | wtf)             aliases_help ;;
@@ -509,26 +510,145 @@ aliases_move() {
 }
 
 # ------------------------------------------------------------------
-# tree
+# install - preset / category selection and framework upgrade
 # ------------------------------------------------------------------
-aliases_tree() {
-    local root="$BASH_ALIASES_ROOT"
-    if command -v tree >/dev/null 2>&1; then
-        tree -I '_core|_config.sh|README.md|TODO.md|.git' "$root"
+aliases_install() {
+    local arg="${1:-}"
+    shift 2>/dev/null
+
+    case "$arg" in
+        ""|h|help|-h|--help)    aliases_install_help ;;
+        upgrade)
+            command -v git >/dev/null 2>&1 || { echo "Error: git is not installed." >&2; return 1; }
+            git -C "$BASH_ALIASES_ROOT" pull --ff-only "$@" || return 1
+            echo "Upgrade complete. Rehashing..."
+            rehash_aliases
+            ;;
+        -*)
+            __ba_preset_toggle "${arg#-}" off ;;
+        full)
+            printf 'full\n' > "$BASH_ALIASES_ROOT/.preset"
+            echo "Preset set to: full"
+            rehash_aliases
+            ;;
+        *)
+            local pnames p found=""
+            for p in $(compgen -A variable | grep '^PRESET_' | sed 's/^PRESET_//'); do
+                [[ "$p" == "$arg" ]] && found=1
+            done
+            if [[ -n "$found" ]]; then
+                printf '%s\n' "$arg" > "$BASH_ALIASES_ROOT/.preset"
+                echo "Preset set to: $arg"
+                rehash_aliases
+            else
+                __ba_preset_toggle "$arg" on
+            fi
+            ;;
+    esac
+}
+
+__ba_preset_toggle() {
+    local cat="$1" want="$2"
+
+    [[ -e "$BASH_ALIASES_ROOT/$cat.sh" || -d "$BASH_ALIASES_ROOT/$cat" ]] \
+        || { echo "Unknown category or preset: $cat (see: al tree)" >&2; return 1; }
+
+    __ba_preset_load
+    local allowed=0
+    __ba_preset_allows "$cat" && allowed=1
+
+    if { [[ "$want" == on ]] && (( allowed )); } || { [[ "$want" == off ]] && (( ! allowed )); }; then
+        echo "'$cat' is already ${want}. Nothing to do."
         return 0
     fi
 
-    echo "('tree' not installed; approximate view below)" >&2
-    ( cd "$root" && find . \
-        \( -name _core -o -name _config.sh -o -name README.md -o -name TODO.md -o -name .git \) -prune \
-        -o -print | sort \
-        | awk '{
-            p=$0; sub(/^\.\//,"",p);
-            if (p==".") next;
-            d=gsub(/\//,"/",p);
-            n=p; sub(/.*\//,"",n);
-            printf "%s%s\n", substr("                        ",1,d*2), n;
-        }' )
+    local cur=() t out=()
+    [[ -s "$BASH_ALIASES_ROOT/.preset" ]] && read -ra cur < "$BASH_ALIASES_ROOT/.preset"
+    out+=("${cur[0]:-full}")
+    for t in "${cur[@]:1}"; do
+        [[ "$t" == "$cat" || "$t" == "-$cat" ]] || out+=("$t")
+    done
+    [[ "$want" == on ]] && out+=("$cat") || out+=("-$cat")
+
+    printf '%s\n' "${out[*]}" > "$BASH_ALIASES_ROOT/.preset"
+    echo "Category '$cat' ${want}."
+    echo "Note: run 'rehash'; open a new shell to fully unload disabled aliases."
+}
+
+aliases_install_help() {
+    __ba_preset_load
+    local pvars p name names=""
+    pvars=$(compgen -A variable | grep '^PRESET_' | grep -v '^PRESET_ON$\|^PRESET_OFF$')
+    for p in $pvars; do
+        name="${p#PRESET_}"
+        [[ "$name" == ON || "$name" == OFF ]] && continue
+        names+="$name "
+    done
+
+    cat <<EOF
+Usage: al install [ARG]
+
+  (no arg)              status: current preset, enabled/disabled categories
+  <preset>              activate a predefined preset: ${names:-}(see _core/presets.sh)
+  <category>            additionally enable one category   e.g.: al install python
+  -<category>           disable one category             e.g.: al install -wifi
+  upgrade               fetch latest framework + files (git pull), then rehash
+
+Categories are the .sh files listed by: al tree
+Disabled categories stay on disk - they are simply not sourced.
+A per-machine selection lives in '$BASH_ALIASES_ROOT/.preset' (not committed).
+After switching presets run 'rehash'; a new shell fully unloads disabled aliases.
+EOF
+
+    if [[ -z "${1:-}" ]]; then
+        echo
+        aliases_install_status
+    fi
+}
+
+aliases_install_status() {
+    __ba_preset_load
+    local f rel mark
+    local extra=""
+    ((${#BASH_ALIASES_PRESET_ON[@]} || ${#BASH_ALIASES_PRESET_OFF[@]})) \
+        && extra=" (+${BASH_ALIASES_PRESET_ON[*]:--} ${BASH_ALIASES_PRESET_OFF[*]/#/-})"
+    echo "Current preset: $BASH_ALIASES_PRESET_NAME$extra   [$BASH_ALIASES_ROOT/.preset]"
+    echo
+    for f in "$BASH_ALIASES_ROOT"/*.sh; do
+        rel="${f##*/}"
+        [[ "$rel" == "_*.sh" ]] && continue
+        if __ba_preset_allows "${rel%.sh}"; then mark="[x]"; else mark="[ ]"; fi
+        echo "  $mark $rel"
+    done
+}
+
+# ------------------------------------------------------------------
+# tree
+# ------------------------------------------------------------------
+aliases_tree() {
+    local root="$BASH_ALIASES_ROOT" f d g rel mark
+    __ba_preset_load
+
+    echo "$root"
+    for f in "$root"/*.sh; do
+        rel="${f##*/}"
+        if [[ "$rel" == _* ]]; then
+            echo "    $rel"
+            continue
+        fi
+        if __ba_preset_allows "${rel%.sh}"; then mark="[x]"; else mark="[ ]"; fi
+        echo "  $mark $rel"
+    done
+
+    for d in "$root"/*/; do
+        d="${d%/}"
+        rel="${d##*/}"
+        [[ "$rel" == "_core" || "$rel" == ".git" ]] && continue
+        echo "  --- $rel/"
+        find "$d" -name '*.sh' | sort | while read -r g; do
+            echo "      ${g#$d/}"
+        done
+    done
 }
 
 # ------------------------------------------------------------------
@@ -571,6 +691,7 @@ aliases_help() {
     echo -e "  ${GREEN}t | tree${NC}                Show the directory/file structure"
     echo -e "  ${GREEN}w | which NAME${NC}           Show where NAME is defined + its code"
     echo -e "  ${GREEN}c | config ...${NC}           Config: open | set KEY VAL | get KEY | list | unset KEY"
+    echo -e "  ${GREEN}i | install ...${NC}          Presets/categories/upgrade (try: al install help)"
     echo -e "  ${GREEN}sv | save-to-git [MSG]${NC}   Commit & push all alias changes (MSG = commit message)"
     echo -e "  ${GREEN}h | help${NC}                 Show this help message\n"
 
@@ -641,7 +762,7 @@ _aliases_complete() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     COMPREPLY=()
 
-    local cmds="list search add edit remove move tree config which save-to-git sync help create l s a n + e c r d m t w h sv g"
+    local cmds="list search add edit remove move tree config which install save-to-git sync help create l s a n + e c r d m t w h i sv g"
 
     if (( ${COMP_CWORD:-0} == 1 )); then
         COMPREPLY=( $(compgen -W "$cmds" -- "$cur") )
@@ -652,7 +773,18 @@ _aliases_complete() {
         a|n|+|add)               _aliases_complete_category "$cur" ;;
         e|c|edit|create)         _aliases_complete_target "$cur" ;;
         r|d|remove|delete|m|move) _aliases_complete_alias "$cur" ;;
+        i|install)               _aliases_complete_install "$cur" ;;
     esac
+}
+
+_aliases_complete_install() {
+    local cur="$1" words="" f
+    for f in "$BASH_ALIASES_ROOT"/*.sh; do
+        f="${f##*/}"
+        [[ "$f" == _*.sh ]] && continue
+        words+=" ${f%.sh} -${f%.sh}"
+    done
+    COMPREPLY=( $(compgen -W "help full minimal standard upgrade $words" -- "$cur") )
 }
 
 complete -F _aliases_complete aliases al
