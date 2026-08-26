@@ -1,6 +1,5 @@
 #!/bin/bash
 # Python virtual environment management
-# @python, @venv, @pip
 
 # alias venv='python3 -m venv .venv && source .venv/bin/activate && pip install --upgrade pip wheel'
 # Create a new virtual environment

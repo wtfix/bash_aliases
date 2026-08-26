@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Nmap Vulnerability Scanning Aliases
-# @net, @pentest, @nmap
 
 # Quick scan
 alias nmap-quick="sudo nmap -T4 -F"

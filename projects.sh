@@ -1,8 +1,5 @@
 #!/bin/bash
 # Project management
-# @projects
-# @NAME: projects
-# @VERSION: 1.0.0
 
 # Function to create a new project
 function projects-new() {

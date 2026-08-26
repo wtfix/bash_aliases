@@ -1,6 +1,3 @@
-
-# @pentest:wifi
-
 # Configuration
 local WIFI_INTERFACE_NAME="wlp2s0"
 local PASS_THIS_WIFI="PASS_THIS_WIFI"
