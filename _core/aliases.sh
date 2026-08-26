@@ -387,6 +387,7 @@ aliases_edit() {
 
     if [[ -z "$input" ]]; then
         echo "Usage: aliases edit [-EDITOR] [NAME | CATEGORY/FILE] [LINE]"
+        echo "  The line is found automatically for an alias; [LINE] overrides it."
         echo "  e.g.: aliases edit -zed pp   (open 'pp' in zed regardless of the configured editor)"
         return 1
     fi

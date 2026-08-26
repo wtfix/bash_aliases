@@ -26,8 +26,15 @@ __bash_aliases_editor_open() {
     fi
 
     case "$editor" in
-        codium|code|zed)
+        codium|code)
             "$editor" -n -g "$file_name:$line_number"
+            ;;
+        zed)
+            if [[ "$line_number" =~ ^[1-9][0-9]*$ ]]; then
+                zed -n "$file_name:$line_number"
+            else
+                zed -n "$file_name"
+            fi
             ;;
         nano|vim|emacs|neovim|gedit|geany)
             "$editor" +"$line_number" "$file_name"
