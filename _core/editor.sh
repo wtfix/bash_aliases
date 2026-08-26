@@ -4,7 +4,7 @@
 __bash_aliases_resolve_editor() {
     local e="${BASH_ALIASES_EDITOR:-$EDITOR}"
     if [[ -z "$e" ]]; then
-        for c in nano vim vi code codium micro emacs; do
+            for c in nano vim vi code codium zed micro emacs; do
             if command -v "$c" >/dev/null 2>&1; then
                 e="$c"
                 break
@@ -26,7 +26,7 @@ __bash_aliases_editor_open() {
     fi
 
     case "$editor" in
-        codium|code)
+        codium|code|zed)
             "$editor" -n -g "$file_name:$line_number"
             ;;
         nano|vim|emacs|neovim|gedit|geany)

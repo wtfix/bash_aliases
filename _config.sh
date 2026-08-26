@@ -2,7 +2,7 @@
 
 
 # Set the default editor;
-# Supported Editors: codium, code, nano, vim, emacs, neovim,
+# Supported Editors: codium, code, nano, vim, emacs, neovim, zed,
 #   subl, atom, webstorm, textmate, idea, brackets, gedit,
 #    kdevelop, qtcreator, jupyter, geany, bluefish
 # Add support for more editors by `aliases edit _core/editor`
