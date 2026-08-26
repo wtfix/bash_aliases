@@ -20,7 +20,7 @@ if [[ -d "$DIR/.git" ]]; then
     git -C "$DIR" pull --ff-only
 else
     echo "Cloning into $DIR ..."
-    git clone --depth 1 "$REPO" "$DIR"
+    git clone --depth 1 -q "$REPO" "$DIR"
 fi
 
 printf '%s\n' "$PRESET" > "$DIR/.preset"

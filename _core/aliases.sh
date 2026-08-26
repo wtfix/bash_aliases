@@ -577,31 +577,32 @@ __ba_preset_toggle() {
 
 aliases_install_help() {
     __ba_preset_load
-    local pvars p name names=""
-    pvars=$(compgen -A variable | grep '^PRESET_' | grep -v '^PRESET_ON$\|^PRESET_OFF$')
-    for p in $pvars; do
-        name="${p#PRESET_}"
-        [[ "$name" == ON || "$name" == OFF ]] && continue
-        names+="$name "
+    local GREEN=$'\e[0;32m' YELLOW=$'\e[1;33m' BLUE=$'\e[0;34m'
+    local CYAN=$'\e[0;36m' GRAY=$'\e[0;90m' BOLD=$'\e[1m' NC=$'\e[0m'
+
+    local p names=""
+    for p in $(compgen -A variable | grep '^PRESET_' | sed 's/^PRESET_//'); do
+        names+="$p "
     done
 
-    cat <<EOF
-Usage: al install [ARG]
+    echo -e "${CYAN}${BOLD}Install & Presets Help${NC}"
+    echo -e "${CYAN}------------------------${NC}"
+    echo -e "Usage: ${GREEN}al install ARG${NC}\n"
 
-  (no arg)              status: current preset, enabled/disabled categories
-  <preset>              activate a predefined preset: ${names:-}(see _core/presets.sh)
-  <category>            additionally enable one category   e.g.: al install python
-  -<category>           disable one category             e.g.: al install -wifi
-  upgrade               fetch latest framework + files (git pull), then rehash
+    echo -e "${YELLOW}${BOLD}Commands:${NC}"
+    echo -e "  ${GREEN}(no arg)${NC}            Status: current preset + enabled/disabled categories"
+    echo -e "  ${GREEN}<preset>${NC}            Activate a predefined preset  ${GRAY}(${names:-see _core/presets.sh})${NC}"
+    echo -e "  ${GREEN}<category>${NC}          Additionally enable a file    ${GRAY}e.g.: al install python${NC}"
+    echo -e "  ${GREEN}-<category>${NC}         Disable a file                ${GRAY}e.g.: al install -wifi${NC}"
+    echo -e "  ${GREEN}upgrade${NC}             Fetch latest framework + files (git pull), then rehash\n"
 
-Categories are the .sh files listed by: al tree
-Disabled categories stay on disk - they are simply not sourced.
-A per-machine selection lives in '$BASH_ALIASES_ROOT/.preset' (not committed).
-After switching presets run 'rehash'; a new shell fully unloads disabled aliases.
-EOF
+    echo -e "${YELLOW}${BOLD}Notes:${NC}"
+    echo -e "  Categories = the .sh files listed by ${BLUE}al tree${NC}"
+    echo -e "  Disabled files stay on disk - they are just not sourced."
+    echo -e "  Selection is per-machine: ${GRAY}$BASH_ALIASES_ROOT/.preset${NC} (not committed)."
+    echo -e "  After changing run ${BLUE}rehash${NC}; open a new shell to fully unload disabled aliases.\n"
 
     if [[ -z "${1:-}" ]]; then
-        echo
         aliases_install_status
     fi
 }
@@ -616,7 +617,7 @@ aliases_install_status() {
     echo
     for f in "$BASH_ALIASES_ROOT"/*.sh; do
         rel="${f##*/}"
-        [[ "$rel" == "_*.sh" ]] && continue
+        [[ "$rel" == _* || "$rel" == "install.sh" ]] && continue
         if __ba_preset_allows "${rel%.sh}"; then mark="[x]"; else mark="[ ]"; fi
         echo "  $mark $rel"
     done
@@ -632,7 +633,7 @@ aliases_tree() {
     echo "$root"
     for f in "$root"/*.sh; do
         rel="${f##*/}"
-        if [[ "$rel" == _* ]]; then
+        if [[ "$rel" == _* || "$rel" == "install.sh" ]]; then
             echo "    $rel"
             continue
         fi
