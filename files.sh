@@ -99,3 +99,26 @@ slice() {
         sed -n "${range}p"
     fi
 }
+
+catfiles() {
+	print_file() {
+	    local file="$1"
+	    printf -- '<<<FILE_START>>>\nFile: %s\n' "$file"
+	    cat -- "$file"
+	    printf '<<<FILE_END>>>\n\n'
+	}
+
+	# Main loop over all arguments
+	for arg in "$@"; do
+	    if [[ -f "$arg" ]]; then
+	        print_file "$arg"
+	    elif [[ -d "$arg" ]]; then
+	        # Process directory recursively (sorted for deterministic output)
+	        while IFS= read -r -d '' file; do
+	            print_file "$file"
+	        done < <(find "$arg" -type f -print0 | sort -z)
+	    else
+	        echo "Warning: '$arg' is not a file or directory – skipping" >&2
+	    fi
+	done
+}
