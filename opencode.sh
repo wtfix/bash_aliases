@@ -8,3 +8,4 @@ alias oc-last-sessions="sqlite3 -header -column ~/.local/share/opencode/opencode
 alias oc-upgrade='brew update && brew upgrade opencode'
 
 alias oc-clear-cache='rm -rf ~/.cache/opencode'
+alias occ='opencode -c'

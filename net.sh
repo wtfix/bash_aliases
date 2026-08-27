@@ -20,3 +20,5 @@ alias myip='curl -s ifconfig.me'
 alias nm-list='nmcli device wifi list'
 alias nm-connect='nmcli device wifi connect'
 alias nm-show-connections='nmcli connection show'
+
+alias ss-top-by-socket='sudo ss -tnp | grep -oP '\''users:\(\("\K[^"]+'\'' | sort | uniq -c | sort -nr | head -20'
