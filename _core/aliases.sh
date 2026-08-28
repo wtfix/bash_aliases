@@ -415,8 +415,8 @@ aliases_edit() {
         local full_path="$BASH_ALIASES_ROOT/$dir/$file.sh"
 
     else
-        # Search for the alias or function in all .sh files (incl. _misc.sh)
-        local file_path=$(find "$BASH_ALIASES_ROOT" -name "*.sh" -exec grep -Hn -E "alias $input=|$input\(\)|$input \(\)" {} + | head -n 1)
+        # Search for the alias or function in all .sh files (incl. _misc.sh), excluding _core
+        local file_path=$(find "$BASH_ALIASES_ROOT" -name "*.sh" -exec grep -Hn -E "\\balias $input=|\\b$input\\(\\)|\\b$input \\(\\)" {} + | grep -v '/_core/' | head -n 1)
 
         if [[ -z "$file_path" ]]; then
             echo "Alias or function '$input' not found. Creating a new file at the root."
