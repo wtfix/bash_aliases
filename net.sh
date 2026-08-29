@@ -11,7 +11,7 @@ alias pp='ping -c 5 1.1.1.1'
 alias nn='netstat -anputW'
 
 # Display public IP address using ifconfig.me service
-alias myip='curl -s ifconfig.me'
+alias myip='curl -s ifconfig.me && echo'
 
 # Add more network-related aliases below
 

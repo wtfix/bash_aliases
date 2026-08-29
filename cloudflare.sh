@@ -1,19 +1,17 @@
 
 # Cloudflare AI Usage function
 cf-ai-usage() {
-    # Set default date to today (UTC)
+    # Default to today (UTC)
     local date_arg="${1:-$(date -u +%Y-%m-%d)}"
 
-    # Check required environment variables
     if [[ -z "$CLOUDFLARE_API_KEY" || -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
         echo "ERROR: CLOUDFLARE_API_KEY and CLOUDFLARE_ACCOUNT_ID must be set." >&2
         return 1
     fi
 
-    # Build the GraphQL query (compact single-line)
+    # GraphQL query – limit 1 is fine; it returns the aggregated total for the day
     local query="query { viewer { accounts(filter: { accountTag: \"$CLOUDFLARE_ACCOUNT_ID\" }) { aiInferenceAdaptiveGroups(limit: 1, filter: { date: \"$date_arg\" }) { sum { totalNeurons } } } } }"
 
-    # Execute the request and extract the value
     local result
     result=$(curl -s -X POST "https://api.cloudflare.com/client/v4/graphql" \
         -H "Authorization: Bearer $CLOUDFLARE_API_KEY" \
