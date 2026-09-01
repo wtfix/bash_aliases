@@ -100,25 +100,107 @@ slice() {
     fi
 }
 
-catfiles() {
-	print_file() {
-	    local file="$1"
-	    printf -- '<<<FILE_START>>>\nFile: %s\n' "$file"
-	    cat -- "$file"
-	    printf '<<<FILE_END>>>\n\n'
-	}
 
-	# Main loop over all arguments
-	for arg in "$@"; do
-	    if [[ -f "$arg" ]]; then
-	        print_file "$arg"
-	    elif [[ -d "$arg" ]]; then
-	        # Process directory recursively (sorted for deterministic output)
-	        while IFS= read -r -d '' file; do
-	            print_file "$file"
-	        done < <(find "$arg" -type f -print0 | sort -z)
-	    else
-	        echo "Warning: '$arg' is not a file or directory – skipping" >&2
-	    fi
-	done
+CATFILES_COMMON_EXCLUDE_PATTERNS=(
+    .venv
+    .ruff_cache
+    .idea
+    .git
+    __pycache__
+    node_modules
+    .next
+    '*.egg-info'
+)
+
+catfiles() {
+    local -a exclude_patterns=()
+    local arg use_common=0
+
+    # ---------- Option parsing ----------
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -e|--exclude)
+                [[ -z "$2" ]] && { echo "Error: $1 requires a pattern" >&2; return 1; }
+                exclude_patterns+=("$2")
+                shift 2
+                ;;
+            -c|--common)
+                use_common=1
+                shift
+                ;;
+            -h|--help)
+                cat <<'EOF'
+Usage: catfiles [OPTIONS] PATH...
+
+Print files with clear separators.
+
+Options:
+  -e, --exclude PATTERN   Exclude files/directories matching PATTERN.
+                          PATTERN can be a name (e.g. .git) or a glob
+                          (e.g. *.log). May be used multiple times.
+  -c, --common            Exclude a predefined list of common directories
+                          and files (see CATFILES_COMMON_EXCLUDE_PATTERNS
+                          above). Can be combined with additional -e.
+  -h, --help              Show this help message.
+  --                      End of options.
+EOF
+                return 0
+                ;;
+            --)
+                shift
+                break
+                ;;
+            -*)
+                echo "Unknown option: $1" >&2
+                return 1
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    # Append common patterns if requested
+    if (( use_common )); then
+        exclude_patterns+=("${CATFILES_COMMON_EXCLUDE_PATTERNS[@]}")
+    fi
+
+    print_file() {
+        local file="$1"
+        printf -- '<<<FILE_START>>>\nFile: %s\n' "$file"
+        cat -- "$file"
+        printf '<<<FILE_END>>>\n\n'
+    }
+
+    # Build find expression
+    local -a find_expr=()
+    if (( ${#exclude_patterns[@]} > 0 )); then
+        find_expr+=( '(' )
+        for i in "${!exclude_patterns[@]}"; do
+            local pattern="${exclude_patterns[$i]}"
+            if [[ "$pattern" != */* ]]; then
+                find_expr+=( -path "*/$pattern" -o -path "*/$pattern/*" -o -path "$pattern" -o -path "$pattern/*" )
+            else
+                find_expr+=( -path "$pattern" -o -path "$pattern/*" )
+            fi
+            (( i < ${#exclude_patterns[@]} - 1 )) && find_expr+=( -o )
+        done
+        find_expr+=( ')' -prune -o -type f )
+    else
+        find_expr+=( -type f )
+    fi
+
+    # Process remaining arguments
+    for arg in "$@"; do
+        if [[ -f "$arg" ]]; then
+            print_file "$arg"
+        elif [[ -d "$arg" ]]; then
+            while IFS= read -r -d '' file; do
+                print_file "$file"
+            done < <(find "$arg" "${find_expr[@]}" -print0 | sort -z)
+        else
+            echo "Warning: '$arg' is not a file or directory – skipping" >&2
+        fi
+    done
 }
+

@@ -9,3 +9,12 @@ alias oc-upgrade='brew update && brew upgrade opencode'
 
 alias oc-clear-cache='rm -rf ~/.cache/opencode'
 alias occ='opencode -c'
+
+oc-wt() {
+    local choice
+    choice=$(git worktree list | sed 's/ .*//' | fzf --preview 'git -C {} log -n 3 --oneline')
+
+    if [ -n "$choice" ]; then
+        opencode "$choice"
+    fi
+}

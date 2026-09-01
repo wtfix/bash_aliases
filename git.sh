@@ -20,17 +20,64 @@ glab-init() {
     echo "✅ Local Git repository already exists."
   fi
 
-  # 4. Create the remote repository on GitLab and set the remote to 'origin'
+  # 4. Create the remote repository on GitLab and set the remote to 'origin'.
+  #    Run glab from inside a fresh temp dir so it cannot create a subdirectory
+  #    named $repo_name in the current working directory, then point origin at
+  #    the freshly-created remote manually.
   echo "☁️  Creating remote repository on GitLab..."
-  glab repo create "$repo_name" --private --remoteName origin
-
-  # 5. Check if the command succeeded
-  if [ $? -eq 0 ]; then
-    echo "✅ Success! Remote 'origin' is now configured for $repo_name."
-    echo "🚀 To push your code, run: git push -u origin HEAD"
-  else
+  local workdir
+  workdir="$(mktemp -d)"
+  local remote_url
+  remote_url="$(cd "$workdir" && glab repo create "$repo_name" --private 2>&1)"
+  local glab_status=$?
+  if [ $glab_status -ne 0 ]; then
     echo "❌ Failed to create the remote repository. Check if the name is already taken." >&2
+    printf '%s\n' "$remote_url" >&2
+    rm -rf "$workdir"
     return 1
+  fi
+  printf '%s\n' "$remote_url"
+  # Extract the https URL from glab's "Created project on GitLab: ... - <url>" line
+  local extracted
+  extracted="$(printf '%s\n' "$remote_url" | grep -oE 'https://[^ ]+' | tail -1)"
+  if [ -z "$extracted" ]; then
+    echo "❌ Could not parse remote URL from glab output." >&2
+    rm -rf "$workdir"
+    return 1
+  fi
+  git remote remove origin 2>/dev/null
+  # Prefer SSH if the user has working SSH auth to GitLab, otherwise fall back
+  # to the HTTPS URL glab returned. This avoids the ksshaskpass GUI prompt
+  # (which can't open in non-interactive sessions) for users with SSH keys.
+  local ssh_path="${extracted#https://gitlab.com/}"
+  if [ -n "$ssh_path" ] && ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@gitlab.com 2>&1 | grep -q "Welcome to GitLab"; then
+    git remote add origin "git@gitlab.com:${ssh_path%.git}.git"
+  else
+    git remote add origin "$extracted"
+  fi
+  rm -rf "$workdir"
+
+  # 5. (success path handled inline above)
+  #    Note: 'git push' needs a commit to exist. Print the full sequence so
+  #    the user copy-pastes the working one.
+  if [ -n "${NO_COLOR:-}" ] || ! [ -t 1 ]; then
+    # No colors: non-interactive stdout or NO_COLOR is set
+    echo "✅ Success! Remote 'origin' is now configured for $repo_name."
+    echo "🚀 Run these three commands to push your code:"
+    echo "     git add -A"
+    echo "     git commit -m \"Initial commit\""
+    echo "     git push -u origin HEAD"
+  else
+    # Bold red for the commands, default for the rest
+    local BOLD RED RESET
+    BOLD=$(printf '\033[1m')
+    RED=$(printf '\033[31m')
+    RESET=$(printf '\033[0m')
+    echo "✅ Success! Remote 'origin' is now configured for $repo_name."
+    echo "🚀 Run these three commands to push your code:"
+    echo "     ${BOLD}${RED}git add -A${RESET}"
+    echo "     ${BOLD}${RED}git commit -m \"Initial commit\"${RESET}"
+    echo "     ${BOLD}${RED}git push -u origin HEAD${RESET}"
   fi
 }
 

@@ -19,3 +19,5 @@ dutop() {
     du -ah "$1" --max-depth="$max_depth" | sort -rh | head -n "$count"
 }
 alias du-top="dutop"
+
+alias dtop='sudo iotop -aoP -d 5'

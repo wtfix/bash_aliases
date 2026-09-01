@@ -797,12 +797,18 @@ aliases_help() {
 # Tab-completion (completion only - never executes the subcommands)
 # ------------------------------------------------------------------
 
-# All alias names defined anywhere under the aliases root.
+# All alias and function names defined anywhere under the aliases root.
 _aliases_complete_alias() {
     local cur="$1"
     local names
-    names=$(grep -rhoE "^[[:space:]]*alias[[:space:]]+[a-zA-Z0-9_.-]+" "$BASH_ALIASES_ROOT" --include=*.sh 2>/dev/null \
-        | sed -E 's/.*alias[[:space:]]+//' | sort -u)
+    names=$(
+        {
+            grep -rhoE "^[[:space:]]*alias[[:space:]]+[a-zA-Z0-9_.-]+" "$BASH_ALIASES_ROOT" --include=*.sh 2>/dev/null \
+                | sed -E 's/.*alias[[:space:]]+//'
+            grep -rhoE "^[[:space:]]*(function[[:space:]]+)?[a-zA-Z0-9_.-]+[[:space:]]*\(\)" "$BASH_ALIASES_ROOT" --include=*.sh 2>/dev/null \
+                | sed -E 's/^[[:space:]]*(function[[:space:]]+)?//; s/[[:space:]]*\(\)$//'
+        } | sort -u
+    )
     COMPREPLY=( $(compgen -W "$names" -- "$cur") )
 }
 
@@ -823,12 +829,18 @@ _aliases_complete_category() {
     COMPREPLY=( $(compgen -W "$opts" -- "$cur") )
 }
 
-# Complete an edit target: alias name and/or category file (root or nested).
+# Complete an edit target: alias/function name and/or category file (root or nested).
 # A leading '/' restricts completion to root-level category files.
 _aliases_complete_target() {
     local cur="$1" names cats
-    names=$(grep -rhoE "^[[:space:]]*alias[[:space:]]+[a-zA-Z0-9_.-]+" "$BASH_ALIASES_ROOT" --include=*.sh 2>/dev/null \
-        | sed -E 's/.*alias[[:space:]]+//' | sort -u)
+    names=$(
+        {
+            grep -rhoE "^[[:space:]]*alias[[:space:]]+[a-zA-Z0-9_.-]+" "$BASH_ALIASES_ROOT" --include=*.sh 2>/dev/null \
+                | sed -E 's/.*alias[[:space:]]+//'
+            grep -rhoE "^[[:space:]]*(function[[:space:]]+)?[a-zA-Z0-9_.-]+[[:space:]]*\(\)" "$BASH_ALIASES_ROOT" --include=*.sh 2>/dev/null \
+                | sed -E 's/^[[:space:]]*(function[[:space:]]+)?//; s/[[:space:]]*\(\)$//'
+        } | sort -u
+    )
     cats=$(find "$BASH_ALIASES_ROOT" -name _core -prune -o -name '*.sh' -print 2>/dev/null \
         | sed "s|^$BASH_ALIASES_ROOT/||; s|\.sh$||" | grep -v '^$' | tr '\n' ' ')
     if [[ "$cur" == /* ]]; then
@@ -853,6 +865,7 @@ _aliases_complete() {
     case "${COMP_WORDS[1]}" in
         a|n|+|add)               _aliases_complete_category "$cur" ;;
         e|c|edit|create)         _aliases_complete_target "$cur" ;;
+        l|s|list|search)         _aliases_complete_alias "$cur" ;;
         r|d|remove|delete|m|move) _aliases_complete_alias "$cur" ;;
         i|install)               _aliases_complete_install "$cur" ;;
     esac
